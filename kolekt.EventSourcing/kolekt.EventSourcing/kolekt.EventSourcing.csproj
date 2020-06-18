@@ -17,5 +17,15 @@
   <ItemGroup>
     <Folder Include="SystemEvents\" />
   </ItemGroup>
+  
+  <PropertyGroup>
+    <OutputType>dll</OutputType>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <PackageId>kolekt.EventSourcing</PackageId>
+    <Version>1.0.0</Version>
+    <Company></Company>
+    <PackageDescription>Event sourcing and CQRS models for kolekt</PackageDescription>
+    <RepositoryUrl>https://github.com/pygmypenguin/kolekt.EventSourcing</RepositoryUrl>
+  </PropertyGroup>
 
 </Project>
