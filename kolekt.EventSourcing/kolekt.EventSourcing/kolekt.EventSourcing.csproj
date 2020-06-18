@@ -19,7 +19,7 @@
   </ItemGroup>
   
   <PropertyGroup>
-    <OutputType>dll</OutputType>
+    <OutputType>library</OutputType>
     <TargetFramework>netstandard2.0</TargetFramework>
     <PackageId>kolekt.EventSourcing</PackageId>
     <Version>1.0.0</Version>
