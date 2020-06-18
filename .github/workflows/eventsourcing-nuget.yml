@@ -26,6 +26,7 @@ jobs:
         run: dotnet nuget add source https://nuget.pkg.github.com/pygmypenguin/index.json --name github --username pygmypenguin --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text
 
       - name: Restore nuget packages
+        working-directory: ./kolekt.EventSourcing/kolekt.EventSourcing
         run: dotnet restore kolekt.EventSourcing.sln
 
       - name: Build and test solution
