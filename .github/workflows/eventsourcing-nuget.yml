@@ -21,13 +21,13 @@ jobs:
         uses: actions/setup-dotnet@v1
         with:
           dotnet-version: 3.1.300
+      
+      - name: Add Github nuget source
+        run: dotnet nuget add source https://nuget.pkg.github.com/pygmypenguin/index.json --name github --username pygmypenguin --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text
 
       - name: Build and test solution
         working-directory: ./kolekt.EventSourcing
         run: dotnet test --configuration Release
-      
-      - name: Add Github nuget source
-        run: dotnet nuget add source https://nuget.pkg.github.com/pygmypenguin/index.json --name github --username pygmypenguin --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text
 
       - name: Pack kolekt.EventSourcing
         working-directory: ./kolekt.EventSourcing
