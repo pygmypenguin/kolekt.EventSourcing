@@ -12,6 +12,7 @@ using kolekt.EventSourcing.Providers;
 using kolekt.EventSourcing.Messages;
 using System.Collections.Immutable;
 using kolekt.EventSourcing.Aggregates;
+using Microsoft.Data.SqlClient;
 
 namespace kolekt.EventSourcing
 {
@@ -42,7 +43,9 @@ namespace kolekt.EventSourcing
         public async Task<(bool Success, int NewVersion)> SaveEventsAsync(Guid aggregateId, int originatingVersion, IReadOnlyCollection<(ConsumeContext Context, Event @Event)> events, string aggregateName)
         {
             var newVersion = originatingVersion;
-            var eventEntities = events.Select(e =>
+            using (var trans = _dataContext.Database.BeginTransaction())
+            {
+                var eventEntities = events.Select(e =>
                 new EventEntity
                 {
                     AggregateId = aggregateId,
@@ -53,19 +56,31 @@ namespace kolekt.EventSourcing
                     Version = ++newVersion
                 });
 
-            using (var t = _dataContext.Database.BeginTransaction())
-            {
                 try
                 {
                     _dataContext.Events.AddRange(eventEntities);
                     await _dataContext.SaveChangesAsync();
 
-                    await t.CommitAsync();
+                    await trans.CommitAsync();
+                }
+                catch (DbUpdateException e) when (e.GetBaseException().GetType() == typeof(SqlException))
+                {
+                    trans.Rollback();
+                    var baseException = e.GetBaseException();
+                    if (baseException.Message.IndexOf("Cannot insert duplicate key", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        throw new AggregateConcurrencyException(aggregateId, "Invalid state when saving entity data. Retry operation after rebuilding entity from saved events", e);
+                    }
+                    else
+                    {
+                        throw;
+                    }
+
                 }
                 catch
                 {
-                    await t.RollbackAsync();
-                    return (false, originatingVersion);
+                    await trans.RollbackAsync();
+                    throw;
                 }
             }
 
@@ -74,6 +89,27 @@ namespace kolekt.EventSourcing
                 await _messageBus.PublishEventAsync(e.Event, e.Context);
             }
             return (true, newVersion);
+        }
+
+        public async Task<bool> DeleteEventsAsync(Guid aggregateId)
+        {
+            using (var trans = _dataContext.Database.BeginTransaction())
+            {
+                try
+                {
+                    var events = _dataContext.Events.Where(a => a.AggregateId == aggregateId);
+                    _dataContext.Events.RemoveRange(events);
+                    _dataContext.SaveChanges();
+                    await trans.CommitAsync();
+
+                    return true;
+                }
+                catch
+                {
+                    await trans.RollbackAsync();
+                    return false;
+                }
+            }
         }
 
         private object TransformEventEntity(EventEntity e)

@@ -41,5 +41,17 @@ namespace DemoApp.Messages
                 Property = !exists ? nameof(command.DemoId) : string.Empty
             };
         }
+
+        private async Task<CommandValidationResult> Validate(DeleteAggregateCommand command)
+        {
+            bool exists = await _aggregateRepository.FindById(command.DemoId) != null;
+
+            return new CommandValidationResult
+            {
+                IsValid = exists,
+                ErrorMessage = !exists ? $"Demo with id { command.DemoId } does not exist" : string.Empty,
+                Property = !exists ? nameof(command.DemoId) : string.Empty
+            };
+        }
     }
 }

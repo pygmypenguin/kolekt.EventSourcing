@@ -1,4 +1,5 @@
 ﻿using kolekt.EventSourcing.Aggregates;
+using kolekt.EventSourcing.Consumers;
 using kolekt.EventSourcing.Messages;
 using MassTransit;
 using System;
@@ -10,32 +11,41 @@ namespace kolekt.EventSourcing.Providers
 {
     public class MessageBus : IMessageBus
     {
-        private readonly IBus _bus;
-        public MessageBus(IBus bus)
+        private readonly IClientFactory _clientFactory;
+        private readonly ISendEndpointProvider _sendEndpointProvider;
+        public MessageBus(IClientFactory clientFactory, ISendEndpointProvider sendEndpointProvider)
         {
-            _bus = bus;
+            _sendEndpointProvider = sendEndpointProvider;
+            _clientFactory = clientFactory;
+        }
+        public async Task SendCommandAsync<TCommand>(TCommand command, ConsumeContext commandContext = null, CancellationToken cancellationToken = default)
+            where TCommand : Command
+        {
+            var uri = GetSendUri(command);
+
+            var sendEndpointTask = commandContext == null ? _sendEndpointProvider.GetSendEndpoint(uri) : commandContext.GetSendEndpoint(uri);
+            var sendEndpoint = await sendEndpointTask;
+
+            await sendEndpoint.Send(command, cancellationToken);
         }
 
-        public async Task<TAggregate> SendCommandAsync<TCommand, TAggregate>(TCommand command, ConsumeContext commandContext = null, CancellationToken cancellationToken = default) 
+        public async Task<CommandResponse<TAggregate>> SendCommandAsync<TCommand, TAggregate>(TCommand command, ConsumeContext commandContext = null, CancellationToken cancellationToken = default) 
             where TCommand : Command
             where TAggregate : AggregateRoot
         {
             var uri = GetSendUri(command);
 
-            var requestClient = commandContext == null ? _bus.CreateRequestClient<TCommand>(uri) : commandContext.CreateRequestClient<TCommand>(_bus, uri);
+            var requestClient = commandContext == null ? _clientFactory.CreateRequestClient<TCommand>(uri) : _clientFactory.CreateRequestClient<TCommand>(commandContext, uri);
             var requestHandle = requestClient.Create(command, cancellationToken);
 
-            var response = await requestHandle.GetResponse<TAggregate>();
+            var response = await requestHandle.GetResponse<CommandResponse<TAggregate>>();
             return response.Message;
         }
 
         public async Task PublishEventAsync<TEvent>(TEvent @event, ConsumeContext eventContext, CancellationToken cancellationToken = default) 
             where TEvent : Event
         {
-            var uri = GetSendUri(@event);
-            var endpoint = await eventContext.GetSendEndpoint(uri);
-            await endpoint.Send((TEvent)@event, cancellationToken);
-            //await eventContext.Publish(@event, cancellationToken);
+            await eventContext.Publish((object)@event, cancellationToken);
         }
 
         private Uri GetSendUri<TMessage>(TMessage message)

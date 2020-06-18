@@ -6,6 +6,10 @@ namespace kolekt.EventSourcing.Messages
 {
     public abstract class Event : Message
     {
-        public Guid EventId => Id;
+        public Event()
+        {
+            EventId = Id;
+        }
+        public Guid EventId { get; set; }
     }
 }

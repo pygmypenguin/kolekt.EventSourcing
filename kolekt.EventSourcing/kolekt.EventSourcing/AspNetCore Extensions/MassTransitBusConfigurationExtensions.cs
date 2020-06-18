@@ -43,6 +43,8 @@ namespace kolekt.EventSourcing.Extensions
                 services.AddHealthChecks();
             }
 
+            services.AddMemoryCache();
+
             services.AddScoped(typeof(IAggregateRepository<>), typeof(AggregateRepository<>));
             services.AddScoped(typeof(IEventStore), typeof(EventStore));
             services.AddScoped(typeof(IMessageBus), typeof(MessageBus));

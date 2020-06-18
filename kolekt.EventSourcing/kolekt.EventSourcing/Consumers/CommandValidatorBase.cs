@@ -18,7 +18,7 @@ namespace kolekt.EventSourcing.Consumers
         Task<CommandValidationResult> Validate(Command command);
     }
 
-    public class CommandValidatorBase : ICommandValidator
+    public abstract class CommandValidatorBase : ICommandValidator
     {
         public Task<CommandValidationResult> Validate(Command command)
         {

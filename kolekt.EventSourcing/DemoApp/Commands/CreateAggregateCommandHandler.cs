@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace DemoApp.Messages
 {
-    public class CreateAggregateCommandHandler : CommandHandlerBase<CreateAggregateCommand>
+    public class CreateAggregateCommandHandler : CommandHandlerBase<CreateAggregateCommand, DemoAggregate>
     {
         private readonly IAggregateRepository<DemoAggregate> _aggregateRepository;
 
@@ -19,12 +19,18 @@ namespace DemoApp.Messages
         }
         public override async Task HandleAsync(CreateAggregateCommand message)
         {
-            var aggregate = new DemoAggregate(message.DemoId);
+            try
+            {
+                var aggregate = new DemoAggregate(message.DemoId);
+                await aggregate.OnCreated(Context);
+                await _aggregateRepository.Save(aggregate);
 
-            await aggregate.OnCreated(Context);
-            await Context.RespondAsync(aggregate);
-
-            await _aggregateRepository.Save(aggregate);
+                Succeed(aggregate);
+            }
+            catch (Exception e)
+            {
+                Fail(e.Message);
+            }
         }
     }
 }

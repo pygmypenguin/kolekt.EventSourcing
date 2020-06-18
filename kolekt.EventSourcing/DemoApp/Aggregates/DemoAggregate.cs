@@ -1,4 +1,6 @@
-﻿using DemoApp.Messages;
+﻿using DemoApp.Commands;
+using DemoApp.Messages;
+using DemoApp.Queries;
 using kolekt.EventSourcing.Aggregates;
 using kolekt.EventSourcing.Messages;
 using MassTransit;
@@ -33,6 +35,14 @@ namespace DemoApp.Aggregates
             });
         }
 
+        public Task OnDeleted(ConsumeContext<DeleteAggregateCommand> context)
+        {
+            return ApplyEventAsync(context, new DemoDeletedEvent
+            {
+                DemoId = Id
+            });
+        }
+
         private void Apply(SomethingHappenedEvent @event)
         {
             EventMessage = @event.MessageText;
@@ -41,6 +51,12 @@ namespace DemoApp.Aggregates
         private void Apply(AggregateCreatedEvent @event)
         {
             //maybe do something here, idk
+            return;
+        }
+
+        private void Apply(DemoDeletedEvent @event)
+        {
+            Console.WriteLine("Goodbye...");
             return;
         }
     }

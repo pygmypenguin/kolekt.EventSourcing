@@ -12,7 +12,7 @@ namespace kolekt.EventSourcing.Aggregates
         /// </summary>
         /// <param name="aggregateRootId">ID of the aggregate root to find</param>
         /// <returns>Aggregate root with provided ID. Null if not found.</returns>
-        Task<TAggregateRoot> FindById(Guid aggregateRootId);
+        Task<TAggregateRoot> FindById(Guid aggregateRootId, bool useCache = true);
 
         /// <summary>
         /// Save events applied to aggregate root in event store
@@ -20,5 +20,12 @@ namespace kolekt.EventSourcing.Aggregates
         /// <param name="aggregateRoot">Aggregate root object to save</param>
         /// <returns></returns>
         Task Save(TAggregateRoot aggregateRoot);
+
+        /// <summary>
+        /// Delete the target aggregate from the event store and remove any cached references
+        /// </summary>
+        /// <param name="id">ID of the aggregate root to remove</param>
+        /// <returns></returns>
+        Task Remove(Guid id);
     }
 }

@@ -2,25 +2,36 @@
 using System;
 using System.Threading.Tasks;
 using System.Linq;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace kolekt.EventSourcing.Aggregates
 {
     public class AggregateRepository<TAggregateRoot> : IAggregateRepository<TAggregateRoot> where TAggregateRoot : AggregateRoot
     {
         private readonly IEventStore _eventStore;
+        private readonly IMemoryCache _memoryCache;
 
-        public AggregateRepository(IEventStore eventStore)
+        private const int _cacheTtlMinutes = 5;
+
+        public AggregateRepository(IEventStore eventStore, IMemoryCache memoryCache)
         {
             _eventStore = eventStore;
+            _memoryCache = memoryCache;
         }
 
-        public async Task<TAggregateRoot> FindById(Guid aggregateRootId)
+        public async Task<TAggregateRoot> FindById(Guid aggregateRootId, bool useCache = true)
         {
+            if (useCache && _memoryCache.TryGetValue(aggregateRootId, out var cachedAggregate))
+            {
+                return cachedAggregate as TAggregateRoot;
+            }
+
             var events = await _eventStore.LoadEventsAsync(aggregateRootId);
             if (events.Any())
             {
                 var root = Activator.CreateInstance(typeof(TAggregateRoot), new object[] { aggregateRootId }) as TAggregateRoot;
                 await root.RehydrateAsync(events);
+                _memoryCache.Set(root.Id, root, TimeSpan.FromMinutes(_cacheTtlMinutes));
                 return root;
             }
             else
@@ -36,14 +47,15 @@ namespace kolekt.EventSourcing.Aggregates
 
             if (success)
             {
-                aggregateRoot.CurrentVersion = newVersion;
-                await aggregateRoot.CommitEventsAsync();
+                await aggregateRoot.CommitEventsAsync(newVersion);
+                _memoryCache.Set(aggregateRoot.Id, aggregateRoot, TimeSpan.FromMinutes(_cacheTtlMinutes));
             }
-            else
-            {
-                throw new AggregateConcurrencyException(aggregateRoot.Id);
-            }
+        }
 
+        public Task Remove(Guid aggregateRootId)
+        {
+            _memoryCache.Remove(aggregateRootId);
+            return _eventStore.DeleteEventsAsync(aggregateRootId);
         }
     }
 }

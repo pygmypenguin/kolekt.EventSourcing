@@ -31,6 +31,7 @@ namespace kolekt.EventSourcing.Aggregates
             foreach (var e in events)
             {
                 await ApplyEventAsync(e);
+                CurrentVersion++;
             }
         }
 
@@ -50,31 +51,26 @@ namespace kolekt.EventSourcing.Aggregates
             {
                 var eventType = domainEvent.GetType();
                 var eventApplicator = this.GetType()
-                    .GetMethods(BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Public).AsEnumerable();
-                eventApplicator = eventApplicator.Where(a => a.Name == "Apply");
-                eventApplicator = eventApplicator.Where(a => a.GetParameters().Count() == 1 && a.GetParameters().First().ParameterType.IsAssignableFrom(eventType));
-                eventApplicator = eventApplicator.Where(a => a.ReturnType.IsAssignableFrom(typeof(void)));
+                    .GetMethods(BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Public).AsEnumerable()
+                    .Where(a => a.Name == "Apply")
+                    .Where(a => a.GetParameters().Count() == 1 && a.GetParameters().First().ParameterType.IsAssignableFrom(eventType))
+                    .Where(a => a.ReturnType.IsAssignableFrom(typeof(void)))
+                    .SingleOrDefault();
 
-                //.Where(a => a.Name == "Apply")
-                //.Where(a => a.GetParameters().Count() == 1 && a.GetParameters().First().ParameterType.IsAssignableFrom(eventType))
-                //.Where(a => a.ReturnType.IsAssignableFrom(typeof(void)))
-                //.SingleOrDefault();
-                var evt = eventApplicator.SingleOrDefault();
-                if (evt != null)
+                if (eventApplicator != null)
                 {
-                    evt.Invoke(this, new object[] { domainEvent });
+                    eventApplicator.Invoke(this, new object[] { domainEvent });
                 }
-
-                //even if we don't do anything, update the version since an event definitely happened
-                CurrentVersion++;
             });
 
             return t;
         }
 
-        internal Task CommitEventsAsync()
+        internal Task CommitEventsAsync(int newVersion)
         {
             _uncommitedEvents.Clear();
+            CurrentVersion = newVersion;
+
             return Task.CompletedTask;
         }
     }

@@ -9,13 +9,15 @@ namespace DemoApp.Messages
 {
     public class AggregateCreatedEventHandler : EventHandlerBase<AggregateCreatedEvent>
     {
-        public AggregateCreatedEventHandler()
+        private readonly ILogger _logger;
+        public AggregateCreatedEventHandler(ILogger<AggregateCreatedEventHandler> logger)
         {
+            _logger = logger;
         }
 
         public override Task HandleAsync(AggregateCreatedEvent message)
         {
-            Console.WriteLine($"created: {message.DemoId}");
+            _logger.LogInformation($"created: {message.DemoId}");
             return Task.CompletedTask;
         }
     }

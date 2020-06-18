@@ -25,5 +25,12 @@ namespace kolekt.EventSourcing
         /// <param name="aggregateId">ID of the aggregate root</param>
         /// <returns>A readonly collection of events that have been applied to the aggregate root</returns>
         Task<IReadOnlyCollection<object>> LoadEventsAsync(Guid aggregateId);
+
+        /// <summary>
+        /// Wipe the record of an entity ever having existed. Use with caution.
+        /// </summary>
+        /// <param name="aggregateId">ID of the aggregate root to remove</param>
+        /// <returns></returns>
+        Task<bool> DeleteEventsAsync(Guid aggregateId);
     }
 }
