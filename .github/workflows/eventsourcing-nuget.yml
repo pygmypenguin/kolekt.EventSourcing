@@ -1,0 +1,43 @@
+name: NuGet Generation
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    types: [closed]
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-18.04
+    name: Update NuGet package
+    defaults:
+      run:
+        working-directory: ./kolekt.EventSourcing
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v1
+
+      - name: Setup .NET Core @ Latest
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 3.1.300
+      
+      - name: Add Github nuget source
+        run: dotnet nuget add source https://nuget.pkg.github.com/pygmypenguin/index.json --name github --username pygmypenguin --password ${{ secrets.GPR_PAT }} --store-password-in-clear-text
+
+      - name: Restore nuget packages
+        run: dotnet restore
+
+      - name: Build and test solution
+        run: dotnet test --configuration Release
+
+      - name: Pack kolekt.EventSourcing
+        run: dotnet pack -c Release -o nupkgs
+
+      - name: Push generated package to GitHub registry
+        env:
+          PUSH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: dotnet nuget push "nupkgs/kolekt.EventSourcing.*.nupkg" --source "github"
